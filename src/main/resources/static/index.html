@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DNA Finder · Cautare secventa ADN</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b1020;
+            --card: rgba(22, 30, 54, 0.72);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text: #e7ebf7;
+            --muted: #8f9bbd;
+            --accent: #22d3ee;
+            --accent-2: #a78bfa;
+            --danger: #fb7185;
+            --nt-a: #34d399;   /* Adenina  */
+            --nt-c: #60a5fa;   /* Citozina */
+            --nt-g: #fbbf24;   /* Guanina  */
+            --nt-t: #f472b6;   /* Timina   */
+            --radius: 16px;
+            --mono: 'JetBrains Mono', Consolas, monospace;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Inter', system-ui, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(900px 500px at 10% -10%, rgba(34, 211, 238, 0.18), transparent 60%),
+                radial-gradient(800px 500px at 100% 0%, rgba(167, 139, 250, 0.18), transparent 60%),
+                radial-gradient(700px 400px at 50% 110%, rgba(52, 211, 153, 0.10), transparent 60%),
+                var(--bg);
+            background-attachment: fixed;
+        }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px 60px; }
+
+        /* ---------- Header ---------- */
+        header { display: flex; align-items: center; gap: 18px; margin-bottom: 32px; }
+        .logo {
+            width: 56px; height: 56px; flex-shrink: 0; border-radius: 16px;
+            display: grid; place-items: center;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            box-shadow: 0 10px 30px rgba(34, 211, 238, 0.25);
+        }
+        h1 {
+            margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.02em;
+            background: linear-gradient(90deg, #fff, #c7d2fe 60%, var(--accent));
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        .subtitle { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
+        .legend { display: flex; gap: 14px; margin-left: auto; flex-wrap: wrap; }
+        .legend span { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+        .legend b { font-family: var(--mono); font-size: 14px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        /* ---------- Cards ---------- */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius);
+            padding: 22px 24px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+        }
+        .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+        .card-title {
+            margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+            color: var(--muted);
+        }
+        .card-title .step {
+            display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 8px;
+            border-radius: 50%; font-size: 12px; color: var(--bg);
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        }
+        .badge {
+            font-family: var(--mono); font-size: 12px; color: var(--accent);
+            background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34, 211, 238, 0.25);
+            padding: 4px 10px; border-radius: 999px;
+        }
+
+        /* ---------- Inputs ---------- */
+        textarea#dna, input#pattern {
+            width: 100%;
+            font-family: var(--mono);
+            color: var(--text);
+            background: rgba(8, 12, 26, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        textarea#dna {
+            height: 300px; padding: 14px 16px; resize: vertical;
+            font-size: 14px; line-height: 1.6; letter-spacing: 0.04em; word-break: break-all;
+        }
+        textarea#dna::selection { background: var(--nt-g); color: #111; }
+        textarea#dna:focus, input#pattern:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.15);
+        }
+        textarea::placeholder, input::placeholder { color: #4b5578; }
+        .hint { color: var(--muted); font-size: 13px; margin-top: 10px; }
+        kbd {
+            font-family: var(--mono); font-size: 11px; padding: 2px 6px; border-radius: 6px;
+            background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .search-row { display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap; }
+        input#pattern {
+            flex: 1 1 260px; padding: 12px 16px;
+            font-size: 18px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase;
+        }
+
+        /* ---------- Buttons ---------- */
+        button {
+            font-family: inherit; font-size: 15px; font-weight: 600;
+            padding: 12px 20px; border-radius: 12px; border: 1px solid transparent;
+            cursor: pointer; transition: transform .1s, box-shadow .2s, background .2s, opacity .2s;
+        }
+        button:active:not(:disabled) { transform: translateY(1px); }
+        button:disabled { opacity: 0.35; cursor: not-allowed; }
+        .btn-primary {
+            color: #06121f;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            box-shadow: 0 8px 24px rgba(34, 211, 238, 0.3);
+        }
+        .btn-primary:hover:not(:disabled) { box-shadow: 0 10px 30px rgba(167, 139, 250, 0.45); }
+        .btn-ghost {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+        .btn-ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); border-color: var(--accent); }
+
+        /* ---------- Results ---------- */
+        .results { display: grid; grid-template-columns: 260px 1fr; gap: 20px; }
+        @media (max-width: 760px) { .results { grid-template-columns: 1fr; } .legend { display: none; } }
+
+        .stat { display: flex; flex-direction: column; justify-content: center; text-align: center; }
+        .stat-number {
+            font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: -0.03em;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        .stat-label { color: var(--muted); font-size: 14px; margin-top: 8px; }
+        .stat-current { margin-top: 18px; font-family: var(--mono); font-size: 15px; }
+        .stat-current strong { color: var(--accent); }
+        .nav { display: flex; gap: 10px; margin-top: 18px; }
+        .nav button { flex: 1; }
+
+        #context {
+            font-family: var(--mono); font-size: 16px; line-height: 1.9; letter-spacing: 0.06em;
+            word-break: break-all; min-height: 4em;
+            padding: 14px 16px; border-radius: 12px; background: rgba(8, 12, 26, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        #context .A { color: var(--nt-a); }
+        #context .C { color: var(--nt-c); }
+        #context .G { color: var(--nt-g); }
+        #context .T { color: var(--nt-t); }
+        #context .ell { color: var(--muted); }
+        #context mark {
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            border-radius: 6px; padding: 2px 3px; margin: 0 2px;
+            box-shadow: 0 0 18px rgba(34, 211, 238, 0.5);
+        }
+        #context mark span { color: #06121f !important; font-weight: 700; }
+        .empty { color: #4b5578; font-family: 'Inter', sans-serif; letter-spacing: 0; }
+
+        #status { color: var(--muted); font-size: 14px; }
+        #error {
+            display: none; margin-top: 14px; padding: 12px 16px; border-radius: 12px;
+            color: var(--danger); background: rgba(251, 113, 133, 0.1); border: 1px solid rgba(251, 113, 133, 0.3);
+            font-weight: 500;
+        }
+        #error:not(:empty) { display: block; }
+
+        .spinner {
+            display: inline-block; width: 14px; height: 14px; margin-right: 8px; vertical-align: -2px;
+            border: 2px solid rgba(255, 255, 255, 0.2); border-top-color: var(--accent); border-radius: 50%;
+            animation: spin .7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        footer { text-align: center; color: #4b5578; font-size: 13px; margin-top: 30px; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header>
+        <div class="logo" aria-hidden="true">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#06121f" stroke-width="2.2" stroke-linecap="round">
+                <path d="M6 2c0 6 12 6 12 12s-12 2-12 8"/>
+                <path d="M18 2c0 6-12 6-12 12s12 2 12 8"/>
+                <path d="M8 5h8M7.5 9h9M7.5 15h9M8 19h8" stroke-width="1.6"/>
+            </svg>
+        </div>
+        <div>
+            <h1>DNA Finder</h1>
+            <p class="subtitle">Gaseste toate aparitiile unei secvente intr-un sir ADN</p>
+        </div>
+        <div class="legend">
+            <span><i class="dot" style="background:var(--nt-a)"></i><b>A</b></span>
+            <span><i class="dot" style="background:var(--nt-c)"></i><b>C</b></span>
+            <span><i class="dot" style="background:var(--nt-g)"></i><b>G</b></span>
+            <span><i class="dot" style="background:var(--nt-t)"></i><b>T</b></span>
+        </div>
+    </header>
+
+    <section class="card">
+        <div class="card-head">
+            <h2 class="card-title"><span class="step">1</span><label for="dna">Sirul ADN</label></h2>
+            <span class="badge" id="length">0 baze</span>
+        </div>
+        <textarea id="dna" spellcheck="false" placeholder="Lipeste aici sirul ADN... (ex: ACGTTGCAGATTACA...)"></textarea>
+        <div class="hint">Spatiile si liniile noi sunt ignorate automat.</div>
+    </section>
+
+    <section class="card">
+        <div class="card-head">
+            <h2 class="card-title"><span class="step">2</span><label for="pattern">Secventa cautata</label></h2>
+            <span id="status"></span>
+        </div>
+        <div class="search-row">
+            <input id="pattern" placeholder="GATTACA" spellcheck="false" autocomplete="off">
+            <button id="searchBtn" class="btn-primary">Cauta</button>
+        </div>
+        <div class="hint"><kbd>Enter</kbd> cauta / urmatoarea &nbsp;·&nbsp; <kbd>Shift</kbd>+<kbd>Enter</kbd> precedenta</div>
+        <div id="error"></div>
+    </section>
+
+    <div class="results">
+        <section class="card stat">
+            <div class="stat-number" id="count">–</div>
+            <div class="stat-label" id="countLabel">aparitii</div>
+            <div class="stat-current" id="currentInfo">&nbsp;</div>
+            <div class="nav">
+                <button id="prevBtn" class="btn-ghost" disabled>&larr; Prev</button>
+                <button id="nextBtn" class="btn-ghost" disabled>Next &rarr;</button>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-head">
+                <h2 class="card-title"><span class="step">3</span>Context aparitie curenta</h2>
+            </div>
+            <div id="context"><span class="empty">Rezultatul va aparea aici.</span></div>
+        </section>
+    </div>
+
+    <footer>Spring Boot · cautare cu regex (inclusiv aparitii suprapuse)</footer>
+</div>
+
+<script>
+    const dna = document.getElementById('dna');
+    const patternInput = document.getElementById('pattern');
+    const searchBtn = document.getElementById('searchBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const statusEl = document.getElementById('status');
+    const errorEl = document.getElementById('error');
+    const contextEl = document.getElementById('context');
+    const lengthEl = document.getElementById('length');
+    const countEl = document.getElementById('count');
+    const countLabelEl = document.getElementById('countLabel');
+    const currentInfoEl = document.getElementById('currentInfo');
+
+    const CONTEXT = 40; // caractere afisate inainte/dupa aparitie
+
+    let result = null;   // { sequence, pattern, count, positions }
+    let current = -1;
+
+    function setLength(n) {
+        lengthEl.textContent = n.toLocaleString('ro-RO') + (n === 1 ? ' baza' : ' baze');
+    }
+
+    function setEmptyContext(text) {
+        contextEl.innerHTML = '';
+        const span = document.createElement('span');
+        span.className = 'empty';
+        span.textContent = text;
+        contextEl.append(span);
+    }
+
+    function resetResult() {
+        result = null; current = -1;
+        prevBtn.disabled = nextBtn.disabled = true;
+        statusEl.textContent = '';
+        countEl.textContent = '–';
+        countLabelEl.textContent = 'aparitii';
+        currentInfoEl.innerHTML = '&nbsp;';
+        setEmptyContext('Rezultatul va aparea aici.');
+    }
+
+    dna.addEventListener('input', () => {
+        setLength(dna.value.replace(/\s+/g, '').length);
+        resetResult();
+    });
+    patternInput.addEventListener('input', resetResult);
+
+    async function search() {
+        errorEl.textContent = '';
+        resetResult();
+        statusEl.innerHTML = '<span class="spinner"></span>Se cauta...';
+        searchBtn.disabled = true;
+        try {
+            const resp = await fetch('/api/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sequence: dna.value, pattern: patternInput.value })
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+                statusEl.textContent = '';
+                errorEl.textContent = data.error || ('Eroare ' + resp.status);
+                return;
+            }
+            // Inlocuim continutul cu varianta normalizata, ca pozitiile sa corespunda exact textului afisat.
+            if (dna.value !== data.sequence) {
+                dna.value = data.sequence;
+                setLength(data.sequence.length);
+            }
+            result = data;
+            statusEl.textContent = '';
+            countEl.textContent = data.count.toLocaleString('ro-RO');
+            countLabelEl.textContent = data.count === 1 ? 'aparitie' : 'aparitii';
+            if (data.count === 0) {
+                setEmptyContext('Secventa nu a fost gasita.');
+                return;
+            }
+            prevBtn.disabled = nextBtn.disabled = false;
+            goTo(0);
+        } catch (e) {
+            statusEl.textContent = '';
+            errorEl.textContent = 'Eroare de retea: ' + e.message;
+        } finally {
+            searchBtn.disabled = false;
+        }
+    }
+
+    // Construieste un fragment cu fiecare nucleotida colorata.
+    function colored(text) {
+        const frag = document.createDocumentFragment();
+        for (const ch of text) {
+            const s = document.createElement('span');
+            s.className = ch;
+            s.textContent = ch;
+            frag.append(s);
+        }
+        return frag;
+    }
+
+    function goTo(index) {
+        if (!result || result.count === 0) return;
+        current = (index + result.count) % result.count; // circular
+        const start = result.positions[current];
+        const end = start + result.pattern.length;
+
+        currentInfoEl.innerHTML = '';
+        currentInfoEl.append(
+            Object.assign(document.createElement('strong'), { textContent: (current + 1).toLocaleString('ro-RO') }),
+            ' / ' + result.count.toLocaleString('ro-RO') + '  ·  pozitia ' + (start + 1).toLocaleString('ro-RO')
+        );
+
+        // selecteaza aparitia in textarea si deruleaza pana la ea
+        dna.blur();
+        dna.setSelectionRange(start, end);
+        dna.focus();
+        scrollTextareaTo(start);
+
+        // context colorat
+        const seq = result.sequence;
+        const from = Math.max(0, start - CONTEXT);
+        const to = Math.min(seq.length, end + CONTEXT);
+        const mark = document.createElement('mark');
+        mark.append(colored(seq.substring(start, end)));
+        contextEl.innerHTML = '';
+        if (from > 0) contextEl.append(Object.assign(document.createElement('span'), { className: 'ell', textContent: '…' }));
+        contextEl.append(colored(seq.substring(from, start)), mark, colored(seq.substring(end, to)));
+        if (to < seq.length) contextEl.append(Object.assign(document.createElement('span'), { className: 'ell', textContent: '…' }));
+    }
+
+    // Estimeaza linia pe care se afla pozitia (textarea cu font monospace si word-break) si centreaza.
+    function scrollTextareaTo(pos) {
+        const style = getComputedStyle(dna);
+        const probe = document.createElement('span');
+        probe.style.font = style.font;
+        probe.style.letterSpacing = style.letterSpacing;
+        probe.style.visibility = 'hidden';
+        probe.style.position = 'absolute';
+        probe.style.whiteSpace = 'pre';
+        probe.textContent = 'A'.repeat(100);
+        document.body.appendChild(probe);
+        const charWidth = probe.getBoundingClientRect().width / 100;
+        probe.remove();
+        const innerWidth = dna.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+        const charsPerLine = Math.max(1, Math.floor(innerWidth / charWidth));
+        const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2;
+        const line = Math.floor(pos / charsPerLine);
+        dna.scrollTop = Math.max(0, line * lineHeight - dna.clientHeight / 2);
+    }
+
+    searchBtn.addEventListener('click', search);
+    nextBtn.addEventListener('click', () => goTo(current + 1));
+    prevBtn.addEventListener('click', () => goTo(current - 1));
+    function onEnter(e, allowSearch) {
+        if (e.key !== 'Enter') return;
+        if (result && result.count > 0) { e.preventDefault(); goTo(current + (e.shiftKey ? -1 : 1)); }
+        else if (allowSearch) { e.preventDefault(); search(); }
+    }
+    patternInput.addEventListener('keydown', e => onEnter(e, true));
+    dna.addEventListener('keydown', e => onEnter(e, false));
+</script>
+</body>
+</html>
